@@ -1,0 +1,20 @@
+{
+  "properties": [
+    {
+      "name": "myproject.butch.size",
+      "type": "java.lang.Integer"
+    },
+    {
+      "name": "myproject.directories.processed",
+      "type": "java.lang.String"
+    },
+    {
+      "name": "myproject.directories.duplicated",
+      "type": "java.lang.String"
+    },
+    {
+      "name": "myproject.directories.input",
+      "type": "java.lang.String"
+    }
+  ]
+}
