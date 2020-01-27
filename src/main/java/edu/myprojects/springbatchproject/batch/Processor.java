@@ -20,10 +20,11 @@ public class Processor implements ItemProcessor<Operation, Operation> {
 
     @Override
     public Operation process(Operation oper) throws Exception {
-        Optional<Operation> operFromDB = repo.findById(oper.getId());
+        Optional<Operation> operFromDB = repo.findByNameAndValueAndStatus(oper.getName(), oper.getValue(), oper.getStatus());
         if (operFromDB.isPresent()){
             //todo записывать в файл
             System.out.println("operation is present");
+            return null;
         }
         return oper;
     }
