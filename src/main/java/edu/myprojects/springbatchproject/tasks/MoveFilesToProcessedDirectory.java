@@ -24,7 +24,7 @@ public class MoveFilesToProcessedDirectory implements Tasklet, InitializingBean 
         createFolderWithProcessed();
         File dir = new File(inputDirectory);
         File[] files = dir.listFiles();
-        assert files != null;
+        if (files == null) return RepeatStatus.FINISHED;
         for (File file : files) {
             String newFile = processedDirectory + "/" + file.getName();
             try {
