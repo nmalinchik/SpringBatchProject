@@ -1,6 +1,9 @@
 package edu.myprojects.springbatchproject.config;
 
 import edu.myprojects.springbatchproject.model.Operation;
+import edu.myprojects.springbatchproject.tasks.MoveFilesToProcessedDirectory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
@@ -11,7 +14,6 @@ import org.springframework.batch.core.configuration.annotation.StepBuilderFactor
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.listener.JobExecutionListenerSupport;
 import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.LineMapper;
@@ -31,37 +33,41 @@ import java.io.File;
 @EnableBatchProcessing
 public class BatchConfig extends JobExecutionListenerSupport {
 
+    private static Logger logger = LoggerFactory.getLogger(BatchConfig.class);
+
     @Value("${myproject.directories.input}")
     private String inputDir;
-
+    @Value("${myproject.directories.processed}")
+    private String processedDirectory;
     @Value("${myproject.butch.size}")
     int chunkSize;
 
     @Bean
-    public Job job(JobBuilderFactory jobBuilderFactory,
-                   StepBuilderFactory stepBuilderFactory,
-                   ItemReader<Operation> operationReader,
-                   ItemProcessor<Operation, Operation> operationProcessor,
-                   ItemWriter<Operation> operationWriter
-    ) {
+    public Job job(JobBuilderFactory jobBuilderFactory, StepBuilderFactory stepBuilderFactory,
+                   ItemProcessor<Operation, Operation> operationProcessor, ItemWriter<Operation> operationWriter) {
 
-        System.out.println(inputDir);
-
-        Step step = stepBuilderFactory.get("ETL-file-load")
+        Step step = stepBuilderFactory.get("Read and write files to DB")
                 .<Operation, Operation> chunk(chunkSize)
-                .reader(operationReader)
+                .reader(multiOperationReader())
                 .processor(operationProcessor)
                 .writer(operationWriter)
                 .build();
 
+        MoveFilesToProcessedDirectory mf = new MoveFilesToProcessedDirectory(inputDir, processedDirectory);
 
-        Job job = jobBuilderFactory.get("ETL-Load")
+        Step moveFilesToProcessDir = stepBuilderFactory.get("move files to process directory")
+                .tasklet(mf)
+                .build();
+
+        Job job = jobBuilderFactory.get("Job for test")
                 .incrementer(new RunIdIncrementer())
                 .listener(this)
                 .start(step)
+                .next(moveFilesToProcessDir)
                 .build();
         return job;
     }
+
 
     @Bean
     public MultiResourceItemReader<Operation> multiOperationReader(){
@@ -85,7 +91,6 @@ public class BatchConfig extends JobExecutionListenerSupport {
     public FlatFileItemReader<Operation> operationReader(){
         FlatFileItemReader<Operation> flatFileItemReader = new FlatFileItemReader<>();
         //todo заменить на свойство
-        flatFileItemReader.setResource(new FileSystemResource("D:\\program\\projects\\SpringBatchProject\\src\\main\\resources\\income\\source.csv"));
         flatFileItemReader.setName("CSV-Reader");
         flatFileItemReader.setLinesToSkip(1);
         flatFileItemReader.setLineMapper(lineMapper());
@@ -112,9 +117,8 @@ public class BatchConfig extends JobExecutionListenerSupport {
     @Override
     public void afterJob(JobExecution jobExecution) {
         if (jobExecution.getStatus() == BatchStatus.COMPLETED){
-            System.out.println("BATCH JOB COMPLETED SUCCESSFULLY");
+            logger.info("BATCH JOB COMPLETED SUCCESSFULLY");
             System.exit(0);
         }
     }
-    
 }
