@@ -80,6 +80,10 @@ public class BatchConfig extends JobExecutionListenerSupport {
     private Resource[] getResources(){
         File dir = new File(inputDir);
         File[] files = dir.listFiles();
+        if (files == null){
+            logger.info("input directory is not exist");
+            return new Resource[0];
+        }
         Resource [] resources = new Resource[files.length];
         for (int i = 0; i < files.length; i++) {
             resources[i] = new FileSystemResource(files[i].getAbsolutePath());
